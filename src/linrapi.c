@@ -22,7 +22,7 @@
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/signal.h>
-#include <linux/smp_lock.h>
+//#include <linux/smp_lock.h>
 #include <linux/kthread.h>
 #include "../include/types.h"
 #include "../include/hal.h"
@@ -154,15 +154,17 @@ static unsigned long tot_mem=0L,max_mem=0L;
 static unsigned long obj_counters[6] = {0L};
 
 static LIST_HEAD(rapi_heap_list);
-static spinlock_t rapi_heap_lock=SPIN_LOCK_UNLOCKED;
+//static spinlock_t rapi_heap_lock=SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(rapi_heap_lock);
 
 static atomic_t running_tasks = {0};
 
 static struct semaphore rapi_thread_lock; // To serialize rAPI threads
 
-static spinlock_t rapi_timer_lock=SPIN_LOCK_UNLOCKED;
-
-static spinlock_t tosca_lock=SPIN_LOCK_UNLOCKED;
+//static spinlock_t rapi_timer_lock=SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(rapi_timer_lock);
+//static spinlock_t tosca_lock=SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(tosca_lock);
 
 //======================================================================
 // C++ support
@@ -894,7 +896,8 @@ static int start_fn(void *arg)
 		return FAILURE;
 	}
 
-	lock_kernel();
+//      is this needed?
+//	lock_kernel();
 #if LINUX_VERSION_CODE >=  KERNEL_VERSION(2,6,0)
 	daemonize("UNICORN");
 #else
@@ -914,7 +917,8 @@ static int start_fn(void *arg)
 		set_user_nice(k->thread,-adj);
 #endif
 	}
-	unlock_kernel();
+//      is this needed?
+//	unlock_kernel();
 
 	DBG(RAPI_D,"start %.4s\n",k->name);
 
@@ -1215,7 +1219,9 @@ DWORD xq_create(
 	}
 
 	memcpy(q->name,name,4);
-	q->msg_q_lock = SPIN_LOCK_UNLOCKED;
+//	q->msg_q_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&q->msg_q_lock);
+//	q->msg_q_lock =  __SPIN_LOCK_UNLOCKED();
 	INIT_LIST_HEAD(&q->msg_q);	
 	*qid = (DWORD)q;
 	DBG(RAPI_D,"q=%.4s\n",q->name);

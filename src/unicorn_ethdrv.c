@@ -20,7 +20,7 @@
 #include <linux/sched.h>
 #include <linux/timer.h>
 #include <linux/errno.h>
-#include <linux/smp_lock.h>
+//#include <linux/smp_lock.h>
 #include <linux/random.h>
 #include <linux/skbuff.h>
 #include <linux/atm.h>
