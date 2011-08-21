@@ -3,6 +3,9 @@
   The chipset consists of the ADSL DMT transceiver ST70138 and the
   ST20174 Analog Front End (AFE).
   This file contains the ethernet interface and SAR routines.
+
+  Updated to work with Linux kernel >= 2.6.38 by 
+  Mariusz Smykuła 2011-03-31 <mariuszs@gmail.com>
 */
 #include <linux/autoconf.h>
 #include <linux/version.h>
@@ -869,7 +872,8 @@ static void simulate_arp_reply(struct sk_buff *skb,struct net_device *eth_dev)
 	struct arphdr_eth *arphdr = (struct arphdr_eth *)&skb->data[ETH_HLEN];
 				
 	if (arphdr->ar_op == htons(ARPOP_REQUEST)) {
-		DBG(ATM_D,"ARP request for %d.%d.%d.%d\n",NIPQUAD(arphdr->ar_tip));
+//		DBG(ATM_D,"ARP request for %d.%d.%d.%d\n",NIPQUAD(arphdr->ar_tip));
+		DBG(ATM_D,"ARP request for %pI4\n",&arphdr->ar_tip);
 		if ((arphdr->ar_sip != arphdr->ar_tip) && (arphdr->ar_sip != 0L)) {
 			__u32 sip = arphdr->ar_sip;
 			arphdr->ar_op = htons(ARPOP_REPLY);
@@ -961,7 +965,7 @@ static void simulate_pppoe_server_reply(struct sk_buff *skb,struct net_device *e
 
 static int unicorn_eth_send(struct sk_buff *skb, struct net_device *eth_dev) 
 {
-	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *) eth_dev->priv;
+	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *) netdev_priv(eth_dev);
 	struct atm_ext_skb_data *skb_data;
  	int status;
 	
@@ -1082,7 +1086,7 @@ static void stop_poll_timer(struct unicorn_ethdrv *drv)
 
 static int unicorn_eth_open(struct net_device *eth_dev) 
 {
-	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)eth_dev->priv;
+	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)netdev_priv(eth_dev);
 
 	DBG(ATM_D,"vpi=%d,vci=%d\n",drv->vpi,drv->vci);
 
@@ -1100,12 +1104,12 @@ static int unicorn_eth_open(struct net_device *eth_dev)
 	// Install the proc_read function in /proc/net/atm/
 #ifndef CONFIG_ATM
 	atm_proc_root = proc_mkdir("net/atm",NULL);
-	if (atm_proc_root) atm_proc_root->owner=THIS_MODULE;
+	//if (atm_proc_root) atm_proc_root->owner=THIS_MODULE;
 #endif	
 	if (atm_proc_root) {
 		drv->proc_dir_entry = create_proc_read_entry("UNICORN:0",0,atm_proc_root,unicorn_eth_proc_read,drv);
 		if (drv->proc_dir_entry) {
-			drv->proc_dir_entry->owner = THIS_MODULE;
+			//drv->proc_dir_entry->owner = THIS_MODULE;
 		} else {
 			DBG(ATM_D,"no proc entry installed\n");
 		}
@@ -1126,7 +1130,7 @@ static int unicorn_eth_open(struct net_device *eth_dev)
 static int 
 unicorn_eth_close(struct net_device *eth_dev) 
 {
-	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)eth_dev->priv;
+	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)netdev_priv(eth_dev);
   
 	DBG(ATM_D,"\n");
 
@@ -1153,7 +1157,7 @@ unicorn_eth_close(struct net_device *eth_dev)
 
 static struct net_device_stats *unicorn_eth_stats(struct net_device *eth_dev)
 {
-	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)eth_dev->priv;
+	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)netdev_priv(eth_dev);
 	return &drv->eth_stats;
 }
 
@@ -1305,7 +1309,7 @@ static int net_control(struct unicorn_ethdrv *drv,T_MswCtrl *ctrl)
 
 static int unicorn_eth_ioctl(struct net_device *eth_dev, struct ifreq *rq, int cmd) 
 {
-	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)eth_dev->priv;
+	struct unicorn_ethdrv *drv = (struct unicorn_ethdrv *)netdev_priv(eth_dev);
 	T_MswCtrl ctrl;
 	void *user_buffer;
 	int err = -ENOTTY;
@@ -1376,6 +1380,18 @@ module_param(DebugLevel, int, 0);
 #endif
 #endif
 
+
+static const struct net_device_ops unicorn_netdev_ops = {
+       	.ndo_open               = unicorn_eth_open,
+       	.ndo_stop               = unicorn_eth_close,
+	.ndo_do_ioctl		= unicorn_eth_ioctl,	
+       	.ndo_change_mtu         = unicorn_eth_change_mtu,      
+       	.ndo_start_xmit         = unicorn_eth_send,
+      	.ndo_get_stats 		= unicorn_eth_stats,
+	.ndo_set_multicast_list = unicorn_eth_set_multicast,
+	.ndo_tx_timeout        	= unicorn_eth_tx_timeout
+};
+
 int unicorn_eth_init(void)
 {
 	struct net_device *eth_dev;
@@ -1391,11 +1407,11 @@ int unicorn_eth_init(void)
 	}
 
 	eth_dev = alloc_etherdev(sizeof(struct unicorn_ethdrv));
-	if (!eth_dev || !eth_dev->priv) {
+	if (!eth_dev || !netdev_priv(eth_dev)) {
 		DBG(ATM_D,"no memory for drv data\n");
 		return -ENOMEM;
 	}
-	unicorn_ethdrv = drv = eth_dev->priv;
+	unicorn_ethdrv = drv = netdev_priv(eth_dev);
 	memset(drv, 0, sizeof(struct unicorn_ethdrv));  
 #if 	(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23))
 	SET_MODULE_OWNER(eth_dev);
@@ -1447,14 +1463,8 @@ int unicorn_eth_init(void)
 	// set MAC address,
 	unicorn_set_mac(eth_dev,mac_address);
 
-	eth_dev->open               = unicorn_eth_open;
-	eth_dev->stop               = unicorn_eth_close;
-	eth_dev->do_ioctl           = unicorn_eth_ioctl;
-	eth_dev->change_mtu         = unicorn_eth_change_mtu;
-	eth_dev->hard_start_xmit    = unicorn_eth_send;
-	eth_dev->get_stats          = unicorn_eth_stats;
-	eth_dev->set_multicast_list = unicorn_eth_set_multicast;
-	eth_dev->tx_timeout         = unicorn_eth_tx_timeout;
+	eth_dev->netdev_ops = &unicorn_netdev_ops;
+	
 	eth_dev->watchdog_timeo     = HZ*5;
 	
 	return 0;

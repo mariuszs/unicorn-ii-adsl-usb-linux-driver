@@ -1604,8 +1604,12 @@ extern int rapi_init(void)
 	INFO("rapi init called\n");
 
 	// create rAPI thread lock
-	init_MUTEX(&rapi_thread_lock);
-
+	#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37) )
+		sema_init(&rapi_thread_lock,1);
+	#else
+		init_MUTEX(&rapi_thread_lock);
+	#endif
+	
 	// Create C++ static classes 
 	__do_global_ctors();
 

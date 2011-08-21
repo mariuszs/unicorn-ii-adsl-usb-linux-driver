@@ -1638,7 +1638,11 @@ static int start_device(struct unicorn_dev *dev,struct usb_device *usb_dev)
 	}
 
 	// Initialize OBC objects
-	init_MUTEX(&dev->obc_lock);
+	#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37) )
+		sema_init(&dev->obc_lock,1);
+	#else
+		init_MUTEX(&dev->obc_lock);
+	#endif	
 	if ((xsm_create("OBC ",0,0,&dev->obc_sem)) != SUCCESS) {
 		return -1;
 	}
