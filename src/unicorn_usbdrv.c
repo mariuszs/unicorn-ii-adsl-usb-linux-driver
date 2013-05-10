@@ -4,7 +4,16 @@
    Analog Front End (AFE).
    This file contains the USB specific routines.
  */
+/*
+  Updated to work with Linux kernel >= 3.6.10 by
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
+*/
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/version.h>
 
 #if defined(CONFIG_MODVERSIONS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -3127,7 +3136,11 @@ static int do_probe(struct usb_device *usb_dev,unsigned long driver_info)
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
+static int probe_unicorn_usb(struct usb_interface *usb_intf,
+#else
 static int __devinit probe_unicorn_usb(struct usb_interface *usb_intf,
+#endif
 		const struct usb_device_id *id)
 {
 	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
@@ -3166,7 +3179,11 @@ static void do_disconnect(struct unicorn_dev *dev)
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
+static void disconnect_unicorn_usb(struct usb_interface *usb_intf)
+#else
 static void __devexit disconnect_unicorn_usb(struct usb_interface *usb_intf)
+#endif
 {
 	do_disconnect(usb_get_intfdata(usb_intf));
 }
@@ -3188,7 +3205,11 @@ MODULE_DEVICE_TABLE (usb, unicorn_usb_ids);
 static struct usb_driver unicorn_usb_driver = {
 name: "unicorn_usb",
 probe: probe_unicorn_usb,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
+disconnect: disconnect_unicorn_usb,
+#else
 disconnect: __devexit_p(disconnect_unicorn_usb),
+#endif
 id_table: unicorn_usb_ids,
 };
 

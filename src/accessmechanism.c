@@ -11,7 +11,16 @@
 // This file contains code specific to the USB requirements
 // of the ADSL Unicorn-II driver
 //----------------------------------------------------------------------
+/*
+  Updated to work with Linux kernel >= 3.6.10 by
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
+*/
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>

@@ -5,7 +5,16 @@
    This file contain the rAPI(reduced API) functions.
    rAPI is the interface between the Modem SW and the Operating System (here Linux).
  */
+/*
+  Updated to work with Linux kernel >= 3.6.10 by
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
+*/
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/version.h>
 
 #if defined(CONFIG_MODVERSIONS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -15,7 +24,9 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/list.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0)
 #include <asm/system.h>
+#endif
 #include <asm/timex.h>
 #include <linux/timer.h>
 #include <linux/slab.h>
@@ -898,9 +909,9 @@ static int start_fn(void *arg)
 
 //      is this needed?
 //	lock_kernel();
-#if LINUX_VERSION_CODE >=  KERNEL_VERSION(2,6,0)
+#if LINUX_VERSION_CODE >=  KERNEL_VERSION(2,6,0) && LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)
 	daemonize("UNICORN");
-#else
+#elseif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 	exit_files(current); 
 	daemonize();
 #endif

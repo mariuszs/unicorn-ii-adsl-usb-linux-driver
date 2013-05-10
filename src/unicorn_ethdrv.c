@@ -6,8 +6,16 @@
 
   Updated to work with Linux kernel >= 2.6.38 by 
   Mariusz Smykuła 2011-03-31 <mariuszs@gmail.com>
+
+  Updated to work with Linux kernel >= 3.6.10 by 
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
 */
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/version.h>
 
 #if defined(CONFIG_MODVERSIONS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -1388,7 +1396,11 @@ static const struct net_device_ops unicorn_netdev_ops = {
        	.ndo_change_mtu         = unicorn_eth_change_mtu,      
        	.ndo_start_xmit         = unicorn_eth_send,
       	.ndo_get_stats 		= unicorn_eth_stats,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+        .ndo_set_rx_mode = unicorn_eth_set_multicast,
+#else
 	.ndo_set_multicast_list = unicorn_eth_set_multicast,
+#endif
 	.ndo_tx_timeout        	= unicorn_eth_tx_timeout
 };
 

@@ -1,4 +1,8 @@
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #if defined(CONFIG_MODVERSIONS) && !defined(MODVERSIONS)
 #define MODVERSIONS
 #endif
@@ -12,6 +16,10 @@
 #include <math.h>
 #include <bits/nan.h>
 #include <bits/errno.h>
+/*
+  Updated to work with Linux kernel >= 3.6.10 by
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
+*/
 
 //======================================================================
 // Floating Point support

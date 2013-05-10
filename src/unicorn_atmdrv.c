@@ -4,7 +4,15 @@
   Analog Front End (AFE).
   This file contains the ATM interface and SAR routines.
 */
+/*
+  Updated to work with Linux kernel >= 3.6.10 by
+  Zbigniew Luszpinski 2013-05-04 <zbiggy(a)o2,pl>
+*/
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/version.h>
 
 #if defined(CONFIG_MODVERSIONS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
